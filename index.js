@@ -108,6 +108,6 @@ appBot.on('callback_query', (query) => {
 
 setInterval(() => {
     appSocket.clients.forEach(ws => ws.send('ping'));
-}, 5000);
+}, 10000);
 
 appServer.listen(process.env.PORT || 8999);

